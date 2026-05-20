@@ -14,7 +14,7 @@ data/output/staging/normalized_output_*.csv
 Future final output:
 
 ```text
-data/output/final/IT_template_output_*.xlsx
+data/output/final/von_hoa_output_*.xlsx
 ```
 
 ## Scope
@@ -27,10 +27,10 @@ The automation currently does:
 4. Parse IT matrix source files.
 5. Normalize all rows into one staging table.
 6. Write `.xlsx` and `.csv` staging output into `data/output/staging`.
-7. Write IT template-compatible final output into `data/output/final`.
+7. Write final capitalization output with sheet `3. vốn hóa` into `data/output/final`.
 8. Write run logs into `logs`.
 
-The automation does not yet write into the final company workbook because the target workbook and destination column mapping are not part of the project yet.
+The automation does not yet write into the official company workbook because the target workbook and destination column mapping are not part of the project yet.
 
 ## Environment requirements
 

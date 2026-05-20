@@ -13,7 +13,7 @@ Automatically collect KPI/personnel cost data from department Google Sheets, nor
 4. Raw input is stored in data/input/raw
 5. Python normalizes ACCA/CMA and IT formats
 6. Staging output is stored in data/output/staging
-7. IT template-compatible final output is stored in data/output/final
+7. Final capitalization output is stored in data/output/final
 8. Logs are stored in logs
 9. OneDrive syncs local files to cloud
 ```
@@ -59,12 +59,12 @@ This is the current runnable output and the main deliverable of the automation.
 ### Final output
 
 ```text
-data/output/final/IT_template_output_*.xlsx
+data/output/final/von_hoa_output_*.xlsx
 ```
 
-For the IT template sample, this output preserves the same matrix structure as the source template.
+This output contains sheet `3. vốn hóa` and consolidates ACCA/CMA/IT rows into one capitalization table.
 
-The separate company workbook output is still future work because the target workbook and destination mapping are not available yet.
+Direct write-back into an official workbook template is still future work because the target workbook and destination mapping are not available yet.
 
 ## Manual run
 

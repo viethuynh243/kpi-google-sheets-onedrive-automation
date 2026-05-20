@@ -51,7 +51,7 @@ What it does:
 2. Downloads raw Excel files into `data/input/raw`.
 3. Normalizes ACCA/CMA and IT data.
 4. Writes staging output into `data/output/staging`.
-5. Writes IT template-compatible final output into `data/output/final`.
+5. Writes final capitalization output into `data/output/final`.
 6. Writes run log into `logs`.
 
 ## 4. Run by Python
@@ -97,10 +97,10 @@ Run logs:
 logs/kpi_automation_YYYYMMDD_HHMMSS.log
 ```
 
-IT template-compatible final output:
+Final capitalization output:
 
 ```text
-data/output/final/IT_template_output_YYYYMMDD_HHMMSS.xlsx
+data/output/final/von_hoa_output_YYYYMMDD_HHMMSS.xlsx
 ```
 
 ## 6. Validate output
@@ -121,13 +121,13 @@ Check these columns first:
 - `actual_quantity`
 - `total_kpi`
 
-For IT template review, open the latest file in:
+For final capitalization review, open the latest file in:
 
 ```text
 data/output/final/
 ```
 
-It should have the same layout as the IT sample template: year sheets, project rows, employee columns, and allocation values as a matrix.
+It should contain a sheet named `3. vốn hóa`.
 
 ## 7. Schedule automatic run
 

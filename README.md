@@ -12,7 +12,7 @@ config/sources.json
   -> automate_kpi.py
   -> data/output/staging/normalized_output_*.xlsx
   -> data/output/staging/normalized_output_*.csv
-  -> data/output/final/IT_template_output_*.xlsx
+  -> data/output/final/von_hoa_output_*.xlsx
 ```
 
 ## Folder structure
@@ -32,7 +32,7 @@ config/sources.json
 |       |   |-- normalized_output_*.xlsx
 |       |   `-- normalized_output_*.csv
 |       `-- final/
-|           `-- IT_template_output_*.xlsx
+|           `-- von_hoa_output_*.xlsx
 |-- logs/
 |   `-- kpi_automation_*.log
 |-- automate_kpi.py
@@ -142,24 +142,24 @@ The staging table includes:
 
 This staging output is the normalized long-table output. It is useful for review, Power Query import, and later mapping into another workbook.
 
-### 2. Final template output
+### 2. Final capitalization output
 
-For the IT template sample, the final output is template-compatible and is stored under:
+The final output target is a workbook with sheet `3. vốn hóa`:
 
 ```text
-data/output/final/IT_template_output_YYYYMMDD_HHMMSS.xlsx
+data/output/final/von_hoa_output_YYYYMMDD_HHMMSS.xlsx
 ```
 
-This file keeps the same shape as the sample Google Sheet:
+This file contains a long-table consolidation for capitalization review:
 
-- Sheets by year, for example `2026`, `2025`.
-- Columns A:E for project/month information.
-- Employee names across columns from F onward.
-- Allocation values in the employee-month matrix.
+- Sheet name: `3. vốn hóa`.
+- Rows: one normalized work allocation row per employee/month/task.
+- Sources: ACCA, CMA, and IT.
+- Key fields: year, month, department, employee, project/product, actual quantity, KPI standard, total KPI, source file, and source sheet.
 
-### 3. Future company workbook output
+### 3. Future template write-back
 
-To generate the company workbook automatically, the target workbook must be available and its destination columns must be mapped:
+If this needs to write directly into the official template workbook, the target workbook must be available and its destination columns must be mapped:
 
 ```text
 Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx
@@ -182,7 +182,7 @@ After the run:
 
 - Raw Google Sheet exports are in `data/input/raw`.
 - Normalized staging output is in `data/output/staging`.
-- IT template-compatible final output is in `data/output/final`.
+- Final capitalization output with sheet `3. vốn hóa` is in `data/output/final`.
 - Logs are in `logs`.
 
 ## Run Python directly

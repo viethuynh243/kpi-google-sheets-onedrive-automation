@@ -4,7 +4,6 @@ import argparse
 import csv
 import json
 import re
-import shutil
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime
@@ -58,6 +57,31 @@ OUTPUT_COLUMNS = [
     "actual_quantity",
     "kpi_standard",
     "total_kpi",
+]
+
+CAPITALIZATION_COLUMNS = [
+    ("Năm", "year"),
+    ("Tháng", "month"),
+    ("Phòng ban", "department"),
+    ("Chương trình", "program"),
+    ("Vị trí", "position"),
+    ("Nhân viên", "employee"),
+    ("Sản phẩm/Dự án", "product_or_project"),
+    ("Link tham chiếu", "reference_link"),
+    ("Sản phẩm mới/cũ", "new_or_old"),
+    ("Tên dự án", "project_name"),
+    ("Bộ môn/Hệ thống", "subject_or_system"),
+    ("Đặc tính/Phân loại", "product_feature"),
+    ("Sản phẩm bàn giao", "deliverable"),
+    ("Cấu phần", "component"),
+    ("Độ khó", "complexity"),
+    ("Đơn vị tính", "unit"),
+    ("Số lượng actual", "actual_quantity"),
+    ("KPI standard", "kpi_standard"),
+    ("Total KPI", "total_kpi"),
+    ("File nguồn", "source_file"),
+    ("Sheet nguồn", "source_sheet"),
+    ("Loại nguồn", "source_type"),
 ]
 
 MONTHS = {
@@ -365,15 +389,15 @@ def write_xlsx(rows: list[dict[str, Any]], path: Path) -> None:
     wb.save(path)
 
 
-def write_it_template_outputs(sources: Iterable[Source], final_dir: Path, timestamp: str) -> list[Path]:
-    outputs: list[Path] = []
-    for source in sources:
-        if source.key != "IT":
-            continue
-        output_path = final_dir / f"IT_template_output_{timestamp}.xlsx"
-        shutil.copy2(source.path, output_path)
-        outputs.append(output_path)
-    return outputs
+def write_capitalization_workbook(rows: list[dict[str, Any]], path: Path) -> None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "3. vốn hóa"
+    ws.append([header for header, _ in CAPITALIZATION_COLUMNS])
+    for row in rows:
+        ws.append([row.get(key) for _, key in CAPITALIZATION_COLUMNS])
+    ws.freeze_panes = "A2"
+    wb.save(path)
 
 
 def main() -> None:
@@ -393,14 +417,14 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = dirs["staging_output"] / f"normalized_output_{timestamp}.csv"
     xlsx_path = dirs["staging_output"] / f"normalized_output_{timestamp}.xlsx"
+    final_path = dirs["final_output"] / f"von_hoa_output_{timestamp}.xlsx"
     write_csv(rows, csv_path)
     write_xlsx(rows, xlsx_path)
-    final_paths = write_it_template_outputs(sources, dirs["final_output"], timestamp)
+    write_capitalization_workbook(rows, final_path)
     print(f"Done: {len(rows)} rows")
     print(f"CSV : {csv_path}")
     print(f"XLSX: {xlsx_path}")
-    for final_path in final_paths:
-        print(f"FINAL IT TEMPLATE: {final_path}")
+    print(f"FINAL CAPITALIZATION: {final_path}")
 
 
 if __name__ == "__main__":
