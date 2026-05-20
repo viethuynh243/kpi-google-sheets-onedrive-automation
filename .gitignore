@@ -1,0 +1,21 @@
+# Local source exports and generated outputs
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.download.xlsx
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
