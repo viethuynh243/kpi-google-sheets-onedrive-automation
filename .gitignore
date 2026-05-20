@@ -6,6 +6,16 @@
 *.download.xlsx
 logs/
 
+!data/
+!data/input/
+!data/input/raw/
+!data/input/raw/.gitkeep
+!data/output/
+!data/output/staging/
+!data/output/staging/.gitkeep
+!data/output/final/
+!data/output/final/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]
@@ -18,4 +28,3 @@ env/
 Thumbs.db
 .vscode/
 .idea/
-

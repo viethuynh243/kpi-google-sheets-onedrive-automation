@@ -1,112 +1,140 @@
 # Huong dan su dung
 
-## 1. Chuan bi
+## 1. Input can chuan bi
 
-1. Dat project trong folder OneDrive local, vi du:
+Nguoi dung chi can khai bao Google Sheet link trong:
 
 ```text
-C:\Users\admin\OneDrive\Documents\Excel
+config/sources.json
 ```
 
-2. Cai Python package:
+Moi source can co:
+
+- `url`: link Google Sheet.
+- `file`: ten file raw se luu trong `data/input/raw`.
+- `department`: phong ban de gan vao output.
+
+Vi du:
+
+```json
+{
+  "IT": {
+    "url": "https://docs.google.com/spreadsheets/d/1x9FBjRHISImjCII7GqOcTTn40_BmAnRN/edit",
+    "file": "IT.xlsx",
+    "department": "IT"
+  }
+}
+```
+
+## 2. Chay tu link Google Sheet ra raw input
+
+Chay:
 
 ```powershell
-pip install -r requirements.txt
+python automate_kpi.py --download
 ```
 
-3. Dam bao 3 Google Sheet nguon co quyen export/download.
+Ket qua raw input:
 
-## 2. Chay thu mot lan
+```text
+data/input/raw/CMA.xlsx
+data/input/raw/ACCA.xlsx
+data/input/raw/IT.xlsx
+```
 
-Mo PowerShell tai folder project va chay:
+Neu file local dang bi lock, script se doc ban download tam thoi va tiep tuc chay.
+
+## 3. Chay tu raw input ra staging output
+
+Neu da co san file trong `data/input/raw`, co the chay:
+
+```powershell
+python automate_kpi.py
+```
+
+Ket qua staging output:
+
+```text
+data/output/staging/normalized_output_YYYYMMDD_HHMMSS.xlsx
+data/output/staging/normalized_output_YYYYMMDD_HHMMSS.csv
+```
+
+## 4. Chay workflow day du bang PowerShell
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ".\run_kpi_automation.ps1"
 ```
 
-Sau khi chay xong, kiem tra:
+Workflow nay gom:
 
-- File output `normalized_output_*.xlsx`
-- File output `normalized_output_*.csv`
-- File log trong folder `logs`
+1. Tai Google Sheet moi nhat.
+2. Luu raw input vao `data/input/raw`.
+3. Normalize du lieu.
+4. Luu staging output vao `data/output/staging`.
+5. Ghi log vao `logs`.
 
-## 3. Kiem tra ket qua
+## 5. Kiem tra output
 
-Mo file `normalized_output_*.xlsx`, sheet `normalized_data`.
+Mo file moi nhat trong:
 
-Can kiem tra nhanh:
+```text
+data/output/staging/
+```
 
-- So dong co hop ly khong.
-- Cot `year` va `month` da dung ky chua.
-- Cot `department` phan biet duoc `SX ACCA+CMA` va `IT`.
-- Cot `employee` co day du nhan vien khong.
-- Cot `actual_quantity` va `total_kpi` co gia tri khong.
+Kiem tra cac cot quan trong:
 
-## 4. Bat lich chay tu dong
+- `year`
+- `month`
+- `department`
+- `employee`
+- `product_or_project`
+- `actual_quantity`
+- `total_kpi`
 
-Chay:
+## 6. Ket qua cuoi cung nam o dau?
+
+Thu muc ket qua cuoi cung:
+
+```text
+data/output/final/
+```
+
+Hien tai folder nay la noi de workbook tong hop sau khi bo sung buoc ghi vao file dich. Buoc nay can file:
+
+```text
+Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx
+```
+
+va can mapping sheet/cot cua file dich.
+
+## 7. Setup lich chay tu dong
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ".\setup_kpi_scheduled_task.ps1"
 ```
 
-Sau khi tao task, co the kiem tra trong Windows Task Scheduler:
+Mac dinh task chay ngay 3 hang thang luc 09:00.
+
+## 8. Sua lich chay
+
+Mo file:
 
 ```text
-Task Scheduler Library > KPI GoogleSheet To OneDrive Automation
+setup_kpi_scheduled_task.ps1
 ```
 
-## 5. Doi lich chay
-
-Mo file `setup_kpi_scheduled_task.ps1` va sua phan:
+Sua cac dong:
 
 ```powershell
-$Trigger = New-ScheduledTaskTrigger `
-    -Monthly `
-    -DaysOfMonth 3 `
-    -At 9:00AM
+/D 3
+/ST 09:00
 ```
 
-Vi du doi sang ngay 5 hang thang luc 18:00:
+Sau do chay lai script setup.
 
-```powershell
-$Trigger = New-ScheduledTaskTrigger `
-    -Monthly `
-    -DaysOfMonth 5 `
-    -At 6:00PM
-```
+## 9. Thu muc khong duoc sua tay
 
-Sau khi sua, chay lai:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File ".\setup_kpi_scheduled_task.ps1"
-```
-
-## 6. Troubleshooting
-
-### File Excel bi lock
-
-Neu thay warning:
-
-```text
-Warning: ACCA.xlsx is locked. Using downloaded temporary copy.
-```
-
-Day khong phai loi nghiem trong. Script dang dung file tam vua download de tiep tuc xu ly.
-
-### Khong tai duoc Google Sheet
-
-Kiem tra:
-
-- Link Google Sheet co con dung khong.
-- File co quyen view/export khong.
-- May co internet khong.
-
-### Khong thay output moi
-
-Kiem tra file log moi nhat trong folder `logs/`.
-
-### Ghi truc tiep vao file tong hop bi loi
-
-Dong file Excel dich truoc khi chay job. Excel desktop thuong lock file khi dang mo.
+- Khong can sua file trong `data/input/raw` neu chay bang `--download`, vi script se tu tai lai.
+- Khong nen sua file trong `data/output/staging`, vi day la output sinh ra.
+- Neu can chinh input, sua `config/sources.json`.
 

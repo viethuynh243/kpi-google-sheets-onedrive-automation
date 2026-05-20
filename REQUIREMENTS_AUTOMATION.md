@@ -14,12 +14,13 @@ Tu dong tong hop du lieu KPI/chi phi nhan su tu cac file Google Sheet phong ban 
 
 Automation can thuc hien cac buoc:
 
-1. Tai ban moi nhat cua cac Google Sheet ve may bang link export `.xlsx`.
-2. Doc tung file Excel nguon.
-3. Chuan hoa du lieu tu cac dang input khac nhau ve mot bang duy nhat.
-4. Ghi output ra file trung gian `.xlsx`/`.csv`.
-5. Khi co file dich that, ghi truc tiep vao sheet data cua file tong hop nam trong thu muc OneDrive local.
-6. OneDrive desktop app tu dong sync file sau khi script ghi xong.
+1. Doc danh sach input tu `config/sources.json`.
+2. Tai ban moi nhat cua cac Google Sheet ve `data/input/raw` bang link export `.xlsx`.
+3. Doc tung file Excel nguon trong `data/input/raw`.
+4. Chuan hoa du lieu tu cac dang input khac nhau ve mot bang duy nhat.
+5. Ghi output staging ra `data/output/staging`.
+6. Khi co file dich that, ghi truc tiep vao sheet data cua file tong hop va luu trong `data/output/final`.
+7. OneDrive desktop app tu dong sync file sau khi script ghi xong.
 
 ## 3. Requirement moi truong
 
@@ -36,9 +37,9 @@ Automation can thuc hien cac buoc:
 
 | Phong ban | File local | Google Sheet ID |
 | --- | --- | --- |
-| SX ACCA/CMA | `CMA.xlsx` | `1jOaBolZ78dbelYkoFL5jSUE0-yJn5425` |
-| SX ACCA/CMA | `ACCA.xlsx` | `16w4-UpSFnjVGpMJlfY9m8LIPTdMZy1dQ` |
-| IT | `IT.xlsx` | `1x9FBjRHISImjCII7GqOcTTn40_BmAnRN` |
+| SX ACCA/CMA | `data/input/raw/CMA.xlsx` | `1jOaBolZ78dbelYkoFL5jSUE0-yJn5425` |
+| SX ACCA/CMA | `data/input/raw/ACCA.xlsx` | `16w4-UpSFnjVGpMJlfY9m8LIPTdMZy1dQ` |
+| IT | `data/input/raw/IT.xlsx` | `1x9FBjRHISImjCII7GqOcTTn40_BmAnRN` |
 
 ## 5. Bang output chuan
 
@@ -107,7 +108,7 @@ Chay voi thu muc khac:
 python automate_kpi.py --work-dir "C:\Users\admin\OneDrive\Documents\Excel" --download
 ```
 
-Sau khi chay, chuong trinh tao:
+Sau khi chay, chuong trinh tao trong `data/output/staging`:
 
 - `normalized_output_YYYYMMDD_HHMMSS.csv`
 - `normalized_output_YYYYMMDD_HHMMSS.xlsx`

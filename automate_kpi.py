@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import urllib.request
 from dataclasses import dataclass
@@ -12,19 +13,22 @@ from typing import Any, Iterable
 from openpyxl import Workbook, load_workbook
 
 
-GOOGLE_SHEETS = {
+DEFAULT_GOOGLE_SHEETS = {
     "CMA": {
         "id": "1jOaBolZ78dbelYkoFL5jSUE0-yJn5425",
+        "url": "https://docs.google.com/spreadsheets/d/1jOaBolZ78dbelYkoFL5jSUE0-yJn5425/edit",
         "file": "CMA.xlsx",
         "department": "SX ACCA+CMA",
     },
     "ACCA": {
         "id": "16w4-UpSFnjVGpMJlfY9m8LIPTdMZy1dQ",
+        "url": "https://docs.google.com/spreadsheets/d/16w4-UpSFnjVGpMJlfY9m8LIPTdMZy1dQ/edit",
         "file": "ACCA.xlsx",
         "department": "SX ACCA+CMA",
     },
     "IT": {
         "id": "1x9FBjRHISImjCII7GqOcTTn40_BmAnRN",
+        "url": "https://docs.google.com/spreadsheets/d/1x9FBjRHISImjCII7GqOcTTn40_BmAnRN/edit",
         "file": "IT.xlsx",
         "department": "IT",
     },
@@ -90,6 +94,37 @@ class Source:
     department: str
 
 
+def ensure_project_dirs(work_dir: Path) -> dict[str, Path]:
+    dirs = {
+        "config": work_dir / "config",
+        "raw_input": work_dir / "data" / "input" / "raw",
+        "staging_output": work_dir / "data" / "output" / "staging",
+        "final_output": work_dir / "data" / "output" / "final",
+        "logs": work_dir / "logs",
+    }
+    for path in dirs.values():
+        path.mkdir(parents=True, exist_ok=True)
+    return dirs
+
+
+def extract_sheet_id(meta: dict[str, Any]) -> str:
+    if meta.get("id"):
+        return str(meta["id"])
+    url = str(meta.get("url", ""))
+    match = re.search(r"/spreadsheets/d/([^/]+)", url)
+    if not match:
+        raise ValueError(f"Missing Google Sheet id/url for source: {meta}")
+    return match.group(1)
+
+
+def load_sources_config(work_dir: Path) -> dict[str, dict[str, Any]]:
+    config_path = work_dir / "config" / "sources.json"
+    if not config_path.exists():
+        return DEFAULT_GOOGLE_SHEETS
+    with config_path.open(encoding="utf-8") as f:
+        return json.load(f)
+
+
 def clean(value: Any) -> Any:
     if value is None:
         return None
@@ -106,12 +141,15 @@ def norm_header(value: Any) -> str:
     return str(text).lower()
 
 
-def download_sources(work_dir: Path) -> list[Source]:
+def download_sources(work_dir: Path, sources_config: dict[str, dict[str, Any]]) -> list[Source]:
+    dirs = ensure_project_dirs(work_dir)
+    raw_input_dir = dirs["raw_input"]
     sources: list[Source] = []
-    for key, meta in GOOGLE_SHEETS.items():
-        out_path = work_dir / meta["file"]
-        tmp_path = work_dir / f".{Path(meta['file']).stem}.download.xlsx"
-        url = f"https://docs.google.com/spreadsheets/d/{meta['id']}/export?format=xlsx"
+    for key, meta in sources_config.items():
+        out_path = raw_input_dir / meta["file"]
+        tmp_path = raw_input_dir / f".{Path(meta['file']).stem}.download.xlsx"
+        sheet_id = extract_sheet_id(meta)
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
         print(f"Downloading {key} -> {out_path.name}")
         urllib.request.urlretrieve(url, tmp_path)
         source_path = out_path
@@ -124,10 +162,14 @@ def download_sources(work_dir: Path) -> list[Source]:
     return sources
 
 
-def local_sources(work_dir: Path) -> list[Source]:
+def local_sources(work_dir: Path, sources_config: dict[str, dict[str, Any]]) -> list[Source]:
+    dirs = ensure_project_dirs(work_dir)
+    raw_input_dir = dirs["raw_input"]
     sources = []
-    for key, meta in GOOGLE_SHEETS.items():
-        path = work_dir / meta["file"]
+    for key, meta in sources_config.items():
+        path = raw_input_dir / meta["file"]
+        if not path.exists():
+            path = work_dir / meta["file"]
         if path.exists():
             sources.append(Source(key=key, path=path, department=meta["department"]))
     return sources
@@ -329,14 +371,16 @@ def main() -> None:
     args = parser.parse_args()
 
     work_dir = Path(args.work_dir).resolve()
-    sources = download_sources(work_dir) if args.download else local_sources(work_dir)
+    dirs = ensure_project_dirs(work_dir)
+    sources_config = load_sources_config(work_dir)
+    sources = download_sources(work_dir, sources_config) if args.download else local_sources(work_dir, sources_config)
     if not sources:
         raise SystemExit("No source files found. Run with --download or place ACCA.xlsx/CMA.xlsx/IT.xlsx in work-dir.")
 
     rows = extract_all(sources)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_path = work_dir / f"normalized_output_{timestamp}.csv"
-    xlsx_path = work_dir / f"normalized_output_{timestamp}.xlsx"
+    csv_path = dirs["staging_output"] / f"normalized_output_{timestamp}.csv"
+    xlsx_path = dirs["staging_output"] / f"normalized_output_{timestamp}.xlsx"
     write_csv(rows, csv_path)
     write_xlsx(rows, xlsx_path)
     print(f"Done: {len(rows)} rows")

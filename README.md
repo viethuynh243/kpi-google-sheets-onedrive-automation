@@ -1,86 +1,104 @@
 # KPI Google Sheets to OneDrive Automation
 
-Tool tu dong tai du lieu KPI tu Google Sheets, chuan hoa cac format khac nhau cua phong ban, va xuat bang staging vao thu muc OneDrive local.
+Project nay tu dong lay du lieu KPI/nhan su tu Google Sheets, chuan hoa cac format khac nhau cua phong ban, va xuat ket qua vao thu muc OneDrive local theo cau truc ro rang.
 
-## Chuc nang
-
-- Tai 3 Google Sheet nguon ve dang `.xlsx`.
-- Doc va chuan hoa du lieu SX ACCA/CMA:
-  - Sheet theo thang, trong sheet co nhieu nhan vien.
-  - Sheet theo nhan vien, trong sheet co cot `Nam` va `Thang`.
-- Doc va chuan hoa du lieu IT dang ma tran:
-  - Dong la du an/hang muc/thang.
-  - Cot ngang la nhan vien.
-- Xuat output:
-  - `normalized_output_YYYYMMDD_HHMMSS.xlsx`
-  - `normalized_output_YYYYMMDD_HHMMSS.csv`
-- Co runner PowerShell de chay tay.
-- Co script tao lich Windows Task Scheduler de chay tu dong hang thang.
-- Co log moi lan chay trong thu muc `logs/`.
-
-## Cau truc project
+## 1. Workflow tong quan
 
 ```text
-.
-├── automate_kpi.py
-├── run_kpi_automation.ps1
-├── setup_kpi_scheduled_task.ps1
-├── requirements.txt
-├── REQUIREMENTS_AUTOMATION.md
-├── WORKFLOW_AUTOMATION.md
-└── README.md
+Google Sheet links
+        |
+        v
+config/sources.json
+        |
+        v
+data/input/raw/*.xlsx
+        |
+        v
+automate_kpi.py
+        |
+        v
+data/output/staging/normalized_output_*.xlsx
+data/output/staging/normalized_output_*.csv
+        |
+        v
+data/output/final/
 ```
 
-## Requirement
+Trong do:
 
-- Windows.
-- Python 3.10 tro len.
-- OneDrive desktop app da login va sync folder chua project.
-- Google Sheets nguon phai cho phep export/download.
-- Python package:
+- `Google Sheet links`: link nguon phong ban cung cap.
+- `config/sources.json`: noi khai bao link nguon, ten file raw, va phong ban.
+- `data/input/raw/`: noi luu file `.xlsx` tai tu Google Sheets.
+- `data/output/staging/`: bang da normalize, dung de review/mapping.
+- `data/output/final/`: noi de file ket qua cuoi cung sau khi bo sung mapping vao workbook tong hop.
 
-```powershell
-pip install -r requirements.txt
+## 2. Input tu link duoc cung cap
+
+Input duoc khai bao tai:
+
+[config/sources.json](config/sources.json)
+
+Vi du:
+
+```json
+{
+  "ACCA": {
+    "url": "https://docs.google.com/spreadsheets/d/16w4-UpSFnjVGpMJlfY9m8LIPTdMZy1dQ/edit",
+    "file": "ACCA.xlsx",
+    "department": "SX ACCA+CMA"
+  }
+}
 ```
 
-## Cach chay nhanh
+Khi chay voi `--download`, chuong trinh tu dong chuyen link tren thanh link export:
 
-Chay bang PowerShell:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File ".\run_kpi_automation.ps1"
+```text
+https://docs.google.com/spreadsheets/d/<sheet_id>/export?format=xlsx
 ```
 
-Script se:
+Sau do file duoc tai ve:
 
-1. Tai Google Sheet moi nhat.
-2. Extract du lieu tu ACCA/CMA/IT.
-3. Tao file output `.xlsx` va `.csv`.
-4. Ghi log trong `logs/`.
-
-## Cach chay truc tiep bang Python
-
-Dung file nguon da co san trong folder:
-
-```powershell
-python automate_kpi.py
+```text
+data/input/raw/ACCA.xlsx
+data/input/raw/CMA.xlsx
+data/input/raw/IT.xlsx
 ```
 
-Tai lai Google Sheets truoc khi xu ly:
+## 3. Xu ly du lieu
 
-```powershell
-python automate_kpi.py --download
+### SX ACCA/CMA
+
+Chuong trinh tu nhan dien 2 dang file:
+
+- `month_employee`: sheet theo thang, vi du `Apr 26`; nam/thang duoc suy ra tu ten sheet.
+- `employee_month`: sheet theo nhan vien; nam/thang lay truc tiep tu cot `Nam` va `Thang`.
+
+Header duoc tim bang cac cot nhu:
+
+- `Ten nhan vien`
+- `Ten san pham`
+- `So luong actual`
+- `KPI standard`
+- `Total KPI`
+
+### IT
+
+File IT duoc xu ly theo dang ma tran:
+
+- Dong 13: thong tin hang muc/du an/thang.
+- Dong 14: danh sach nhan vien theo cot ngang.
+- Moi o co gia tri khac 0 se duoc unpivot thanh mot dong output.
+
+## 4. Output la gi?
+
+Output hien tai la bang staging da chuan hoa:
+
+```text
+data/output/staging/normalized_output_YYYYMMDD_HHMMSS.xlsx
+data/output/staging/normalized_output_YYYYMMDD_HHMMSS.csv
 ```
 
-Chi dinh folder lam viec:
-
-```powershell
-python automate_kpi.py --work-dir "C:\Users\admin\OneDrive\Documents\Excel" --download
-```
-
-## Output staging
-
-Bang output gom cac cot:
+Bang staging gom cac cot:
 
 - `source_file`
 - `source_sheet`
@@ -105,46 +123,98 @@ Bang output gom cac cot:
 - `kpi_standard`
 - `total_kpi`
 
-## Setup chay tu dong hang thang
+Day la ket qua da duoc chuan hoa tu moi file nguon. File nay co the dung de:
 
-Chay lenh:
+- Review du lieu tong hop.
+- Import vao Power Query/Excel.
+- Mapping tiep vao workbook tong hop `Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx`.
+
+## 5. Ket qua cuoi cung
+
+Ket qua cuoi cung du kien nam trong:
+
+```text
+data/output/final/
+```
+
+Hien tai project da automate den buoc staging. De ghi thang vao file tong hop cuoi cung, can dat file dich vao project va bo sung mapping sheet/cot:
+
+```text
+Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx
+sheet: Data SX ACCA+CMA
+```
+
+Ly do chua ghi thang vao file dich: file workbook dich chua co trong workspace luc build script, nen chua xac dinh duoc header/cot can ghi.
+
+## 6. Cau truc thu muc
+
+```text
+.
+├── config/
+│   └── sources.json
+├── data/
+│   ├── input/
+│   │   └── raw/
+│   │       ├── ACCA.xlsx
+│   │       ├── CMA.xlsx
+│   │       └── IT.xlsx
+│   └── output/
+│       ├── staging/
+│       │   ├── normalized_output_*.xlsx
+│       │   └── normalized_output_*.csv
+│       └── final/
+├── logs/
+│   └── kpi_automation_*.log
+├── automate_kpi.py
+├── run_kpi_automation.ps1
+├── setup_kpi_scheduled_task.ps1
+├── requirements.txt
+├── USAGE.md
+├── REQUIREMENTS_AUTOMATION.md
+└── WORKFLOW_AUTOMATION.md
+```
+
+File Excel nguon, output, va log khong duoc commit len GitHub.
+
+## 7. Cach chay
+
+Cai dependency:
+
+```powershell
+pip install -r requirements.txt
+```
+
+Chay workflow day du:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ".\run_kpi_automation.ps1"
+```
+
+Chay Python truc tiep:
+
+```powershell
+python automate_kpi.py --download
+```
+
+## 8. Chay tu dong
+
+Tao scheduled task:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ".\setup_kpi_scheduled_task.ps1"
 ```
 
-Mac dinh task chay:
+Mac dinh:
 
-- Ngay 3 hang thang.
-- Luc 09:00 theo gio may.
+- Chay ngay 3 hang thang.
+- Luc 09:00.
 
-Task name:
+## 9. Bao mat du lieu
 
-```text
-KPI GoogleSheet To OneDrive Automation
-```
+Repo public chi chua code/config/docs. Cac file sau bi ignore:
 
-## Ghi chu ve file bi lock
-
-Neu Excel hoac OneDrive dang lock file nguon, script van co the chay tiep bang ban download tam thoi. Vi du:
-
-```text
-Warning: ACCA.xlsx is locked. Using downloaded temporary copy.
-```
-
-Neu sau nay ghi truc tiep vao file tong hop Excel, nen dong file dich truoc khi job chay de tranh loi lock.
-
-## Gioi han hien tai
-
-Workflow hien tai automate den buoc staging output. De ghi thang vao file tong hop:
-
-```text
-Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx
-```
-
-can bo sung mapping cot vao sheet dich, vi file dich chua co trong workspace luc xay dung tool.
-
-## Bao mat du lieu
-
-Repo nay khong nen commit file Excel nguon, output CSV/XLSX, log, hoac file chua du lieu nhan su. `.gitignore` da loai tru cac file do.
+- `*.xlsx`
+- `*.csv`
+- `logs/`
+- file output sinh ra
 

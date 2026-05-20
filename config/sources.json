@@ -1,0 +1,17 @@
+{
+  "CMA": {
+    "url": "https://docs.google.com/spreadsheets/d/1jOaBolZ78dbelYkoFL5jSUE0-yJn5425/edit",
+    "file": "CMA.xlsx",
+    "department": "SX ACCA+CMA"
+  },
+  "ACCA": {
+    "url": "https://docs.google.com/spreadsheets/d/16w4-UpSFnjVGpMJlfY9m8LIPTdMZy1dQ/edit",
+    "file": "ACCA.xlsx",
+    "department": "SX ACCA+CMA"
+  },
+  "IT": {
+    "url": "https://docs.google.com/spreadsheets/d/1x9FBjRHISImjCII7GqOcTTn40_BmAnRN/edit",
+    "file": "IT.xlsx",
+    "department": "IT"
+  }
+}
