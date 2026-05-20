@@ -54,6 +54,14 @@ What it does:
 5. Writes final capitalization output into `data/output/final`.
 6. Writes run log into `logs`.
 
+Final output requires the real template file:
+
+```text
+data/input/template/von_hoa_template.xlsx
+```
+
+If this file is missing, the workflow intentionally skips final output and only creates staging output.
+
 ## 4. Run by Python
 
 Download latest Google Sheets and create output:
@@ -128,6 +136,14 @@ data/output/final/
 ```
 
 It should contain a sheet named `3. vốn hóa`.
+
+If no file appears in `data/output/final`, check the log for:
+
+```text
+FINAL SKIPPED
+```
+
+Then place the real template workbook at `data/input/template/von_hoa_template.xlsx` and run again.
 
 ## 7. Schedule automatic run
 

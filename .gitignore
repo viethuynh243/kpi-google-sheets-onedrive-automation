@@ -11,6 +11,8 @@ result/
 !data/input/
 !data/input/raw/
 !data/input/raw/.gitkeep
+!data/input/template/
+!data/input/template/.gitkeep
 !data/output/
 !data/output/staging/
 !data/output/staging/.gitkeep

@@ -27,10 +27,10 @@ The automation currently does:
 4. Parse IT matrix source files.
 5. Normalize all rows into one staging table.
 6. Write `.xlsx` and `.csv` staging output into `data/output/staging`.
-7. Write final capitalization output with sheet `3. vốn hóa` into `data/output/final`.
+7. If `data/input/template/von_hoa_template.xlsx` exists, write final capitalization output with sheet `3. vốn hóa` into `data/output/final`.
 8. Write run logs into `logs`.
 
-The automation does not yet write into the official company workbook because the target workbook and destination column mapping are not part of the project yet.
+The automation intentionally skips final output when the real template is missing, because generating a guessed workbook structure can produce incorrect results.
 
 ## Environment requirements
 
@@ -159,8 +159,8 @@ Default schedule:
 
 To complete the final workbook step:
 
-1. Add target workbook path config.
-2. Read the destination sheet `Data SX ACCA+CMA`.
-3. Map staging columns to target columns.
+1. Put the official workbook at `data/input/template/von_hoa_template.xlsx`.
+2. Confirm the destination sheet is `3. vốn hóa`.
+3. Confirm header names and mapping from staging columns to target columns.
 4. Add replace-by-year-month logic to avoid duplicate rows.
 5. Save the resulting workbook under `data/output/final`.

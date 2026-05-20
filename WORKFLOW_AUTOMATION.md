@@ -13,7 +13,7 @@ Automatically collect KPI/personnel cost data from department Google Sheets, nor
 4. Raw input is stored in data/input/raw
 5. Python normalizes ACCA/CMA and IT formats
 6. Staging output is stored in data/output/staging
-7. Final capitalization output is stored in data/output/final
+7. If the real template exists, final capitalization output is stored in data/output/final
 8. Logs are stored in logs
 9. OneDrive syncs local files to cloud
 ```
@@ -62,9 +62,13 @@ This is the current runnable output and the main deliverable of the automation.
 data/output/final/von_hoa_output_*.xlsx
 ```
 
-This output contains sheet `3. vốn hóa` and consolidates ACCA/CMA/IT rows into one capitalization table.
+This output is generated from:
 
-Direct write-back into an official workbook template is still future work because the target workbook and destination mapping are not available yet.
+```text
+data/input/template/von_hoa_template.xlsx
+```
+
+The template must contain sheet `3. vốn hóa`. The script writes into the detected header columns in that sheet. If the template is missing or the sheet/header cannot be found, final output is skipped.
 
 ## Manual run
 
@@ -100,9 +104,9 @@ Default:
 
 ## Remaining work for final workbook automation
 
-To write directly into `Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx`, add:
+To make final output exact against the official workbook, add or confirm:
 
-1. Target workbook path configuration.
-2. Mapping from staging columns to `Data SX ACCA+CMA`.
+1. Official workbook saved as `data/input/template/von_hoa_template.xlsx`.
+2. Confirmed header mapping for sheet `3. vốn hóa`.
 3. Replace-by-period logic to avoid duplicates.
 4. Validation report for written rows and rejected rows.

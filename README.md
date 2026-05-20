@@ -27,6 +27,8 @@ config/sources.json
 |   |       |-- ACCA.xlsx
 |   |       |-- CMA.xlsx
 |   |       `-- IT.xlsx
+|   |   `-- template/
+|   |       `-- von_hoa_template.xlsx
 |   `-- output/
 |       |-- staging/
 |       |   |-- normalized_output_*.xlsx
@@ -144,18 +146,27 @@ This staging output is the normalized long-table output. It is useful for review
 
 ### 2. Final capitalization output
 
-The final output target is a workbook with sheet `3. vốn hóa`:
+Final output is only generated when the real workbook template exists at:
+
+```text
+data/input/template/von_hoa_template.xlsx
+```
+
+The template must contain sheet:
+
+```text
+3. vốn hóa
+```
+
+When the template exists, the program copies that template structure and writes output to:
 
 ```text
 data/output/final/von_hoa_output_YYYYMMDD_HHMMSS.xlsx
 ```
 
-This file contains a long-table consolidation for capitalization review:
+The program detects the header row in sheet `3. vốn hóa`, maps known columns, clears old data below the header, and writes rows from staging.
 
-- Sheet name: `3. vốn hóa`.
-- Rows: one normalized work allocation row per employee/month/task.
-- Sources: ACCA, CMA, and IT.
-- Key fields: year, month, department, employee, project/product, actual quantity, KPI standard, total KPI, source file, and source sheet.
+If the template is missing, final output is skipped to avoid generating a workbook with the wrong structure.
 
 ### 3. Future template write-back
 
@@ -182,7 +193,8 @@ After the run:
 
 - Raw Google Sheet exports are in `data/input/raw`.
 - Normalized staging output is in `data/output/staging`.
-- Final capitalization output with sheet `3. vốn hóa` is in `data/output/final`.
+- If `data/input/template/von_hoa_template.xlsx` exists, final capitalization output is in `data/output/final`.
+- If the template is missing, the script prints `FINAL SKIPPED` and only staging output is produced.
 - Logs are in `logs`.
 
 ## Run Python directly

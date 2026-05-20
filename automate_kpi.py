@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import re
+import unicodedata
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime
@@ -59,30 +60,33 @@ OUTPUT_COLUMNS = [
     "total_kpi",
 ]
 
-CAPITALIZATION_COLUMNS = [
-    ("Năm", "year"),
-    ("Tháng", "month"),
-    ("Phòng ban", "department"),
-    ("Chương trình", "program"),
-    ("Vị trí", "position"),
-    ("Nhân viên", "employee"),
-    ("Sản phẩm/Dự án", "product_or_project"),
-    ("Link tham chiếu", "reference_link"),
-    ("Sản phẩm mới/cũ", "new_or_old"),
-    ("Tên dự án", "project_name"),
-    ("Bộ môn/Hệ thống", "subject_or_system"),
-    ("Đặc tính/Phân loại", "product_feature"),
-    ("Sản phẩm bàn giao", "deliverable"),
-    ("Cấu phần", "component"),
-    ("Độ khó", "complexity"),
-    ("Đơn vị tính", "unit"),
-    ("Số lượng actual", "actual_quantity"),
-    ("KPI standard", "kpi_standard"),
-    ("Total KPI", "total_kpi"),
-    ("File nguồn", "source_file"),
-    ("Sheet nguồn", "source_sheet"),
-    ("Loại nguồn", "source_type"),
-]
+TEMPLATE_SHEET_NAME = "3. vốn hóa"
+TEMPLATE_FILE_NAME = "von_hoa_template.xlsx"
+
+TEMPLATE_HEADER_ALIASES = {
+    "year": ["nam", "year"],
+    "month": ["thang", "month"],
+    "department": ["phong ban", "department", "bo phan"],
+    "program": ["chuong trinh", "program"],
+    "position": ["vi tri", "position", "chuc danh"],
+    "employee": ["nhan vien", "ten nhan vien", "ho ten", "employee"],
+    "product_or_project": ["san pham/du an", "san pham", "du an", "ten san pham", "ten du an"],
+    "reference_link": ["link tham chieu", "link"],
+    "new_or_old": ["san pham moi/cu", "san pham moi/san pham cu"],
+    "project_name": ["ten du an"],
+    "subject_or_system": ["bo mon/he thong", "bo mon", "he thong"],
+    "product_feature": ["dac tinh/phan loai", "dac tinh san pham", "phan loai"],
+    "deliverable": ["san pham ban giao"],
+    "component": ["cau phan"],
+    "complexity": ["do kho"],
+    "unit": ["don vi tinh"],
+    "actual_quantity": ["so luong actual", "actual quantity", "actual"],
+    "kpi_standard": ["kpi standard"],
+    "total_kpi": ["total kpi"],
+    "source_file": ["file nguon"],
+    "source_sheet": ["sheet nguon"],
+    "source_type": ["loai nguon"],
+}
 
 MONTHS = {
     "jan": 1,
@@ -123,6 +127,7 @@ def ensure_project_dirs(work_dir: Path) -> dict[str, Path]:
     dirs = {
         "config": work_dir / "config",
         "raw_input": work_dir / "data" / "input" / "raw",
+        "template_input": work_dir / "data" / "input" / "template",
         "staging_output": work_dir / "data" / "output" / "staging",
         "final_output": work_dir / "data" / "output" / "final",
         "logs": work_dir / "logs",
@@ -157,6 +162,17 @@ def clean(value: Any) -> Any:
         value = re.sub(r"\s+", " ", value).strip()
         return value or None
     return value
+
+
+def ascii_key(value: Any) -> str:
+    text = clean(value)
+    if text is None:
+        return ""
+    text = unicodedata.normalize("NFD", str(text))
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+    text = text.replace("đ", "d").replace("Đ", "D")
+    text = re.sub(r"[^a-zA-Z0-9]+", " ", text).lower().strip()
+    return text
 
 
 def norm_header(value: Any) -> str:
@@ -389,15 +405,63 @@ def write_xlsx(rows: list[dict[str, Any]], path: Path) -> None:
     wb.save(path)
 
 
-def write_capitalization_workbook(rows: list[dict[str, Any]], path: Path) -> None:
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "3. vốn hóa"
-    ws.append([header for header, _ in CAPITALIZATION_COLUMNS])
+def find_template_sheet(wb):
+    wanted = ascii_key(TEMPLATE_SHEET_NAME)
+    for ws in wb.worksheets:
+        if ascii_key(ws.title) == wanted:
+            return ws
+    return None
+
+
+def find_template_header(ws) -> tuple[int | None, dict[int, str]]:
+    alias_to_key = {}
+    for key, aliases in TEMPLATE_HEADER_ALIASES.items():
+        for alias in aliases:
+            alias_to_key[ascii_key(alias)] = key
+
+    best_row = None
+    best_mapping: dict[int, str] = {}
+    for row_idx in range(1, min(ws.max_row or 0, 80) + 1):
+        mapping: dict[int, str] = {}
+        for col_idx in range(1, (ws.max_column or 0) + 1):
+            header = ascii_key(ws.cell(row_idx, col_idx).value)
+            if header in alias_to_key:
+                mapping[col_idx] = alias_to_key[header]
+        if len(mapping) > len(best_mapping):
+            best_row = row_idx
+            best_mapping = mapping
+    if len(best_mapping) < 3:
+        return None, {}
+    return best_row, best_mapping
+
+
+def write_template_final(rows: list[dict[str, Any]], template_path: Path, output_path: Path) -> bool:
+    if not template_path.exists():
+        print(f"FINAL SKIPPED: template not found at {template_path}")
+        return False
+
+    wb = load_workbook(template_path)
+    ws = find_template_sheet(wb)
+    if ws is None:
+        print(f"FINAL SKIPPED: sheet '{TEMPLATE_SHEET_NAME}' not found in {template_path}")
+        return False
+
+    header_row, column_mapping = find_template_header(ws)
+    if header_row is None:
+        print(f"FINAL SKIPPED: could not detect headers in sheet '{ws.title}'")
+        return False
+
+    if ws.max_row > header_row:
+        ws.delete_rows(header_row + 1, ws.max_row - header_row)
+
     for row in rows:
-        ws.append([row.get(key) for _, key in CAPITALIZATION_COLUMNS])
-    ws.freeze_panes = "A2"
-    wb.save(path)
+        out = [None] * ws.max_column
+        for col_idx, key in column_mapping.items():
+            out[col_idx - 1] = row.get(key)
+        ws.append(out)
+    ws.freeze_panes = ws.freeze_panes or f"A{header_row + 1}"
+    wb.save(output_path)
+    return True
 
 
 def main() -> None:
@@ -417,14 +481,16 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = dirs["staging_output"] / f"normalized_output_{timestamp}.csv"
     xlsx_path = dirs["staging_output"] / f"normalized_output_{timestamp}.xlsx"
+    template_path = dirs["template_input"] / TEMPLATE_FILE_NAME
     final_path = dirs["final_output"] / f"von_hoa_output_{timestamp}.xlsx"
     write_csv(rows, csv_path)
     write_xlsx(rows, xlsx_path)
-    write_capitalization_workbook(rows, final_path)
+    final_written = write_template_final(rows, template_path, final_path)
     print(f"Done: {len(rows)} rows")
     print(f"CSV : {csv_path}")
     print(f"XLSX: {xlsx_path}")
-    print(f"FINAL CAPITALIZATION: {final_path}")
+    if final_written:
+        print(f"FINAL CAPITALIZATION: {final_path}")
 
 
 if __name__ == "__main__":
