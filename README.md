@@ -1,44 +1,66 @@
 # KPI Google Sheets to OneDrive Automation
 
-Project nay tu dong lay du lieu KPI/nhan su tu Google Sheets, chuan hoa cac format khac nhau cua phong ban, va xuat ket qua vao thu muc OneDrive local theo cau truc ro rang.
+Automation nay tai KPI/chi phi nhan su tu Google Sheets, chuan hoa du lieu ACCA/CMA/IT ve mot bang staging, va luu ket qua vao folder OneDrive local.
 
-## 1. Workflow tong quan
+Project da tach ro input, output, log va config de tranh tinh trang file bi tron trong root folder.
+
+## Workflow
 
 ```text
-Google Sheet links
-        |
-        v
 config/sources.json
-        |
-        v
-data/input/raw/*.xlsx
-        |
-        v
-automate_kpi.py
-        |
-        v
-data/output/staging/normalized_output_*.xlsx
-data/output/staging/normalized_output_*.csv
-        |
-        v
-data/output/final/
+  -> data/input/raw/*.xlsx
+  -> automate_kpi.py
+  -> data/output/staging/normalized_output_*.xlsx
+  -> data/output/staging/normalized_output_*.csv
+  -> data/output/final/  (future final workbook output)
 ```
 
-Trong do:
+## Folder structure
 
-- `Google Sheet links`: link nguon phong ban cung cap.
-- `config/sources.json`: noi khai bao link nguon, ten file raw, va phong ban.
-- `data/input/raw/`: noi luu file `.xlsx` tai tu Google Sheets.
-- `data/output/staging/`: bang da normalize, dung de review/mapping.
-- `data/output/final/`: noi de file ket qua cuoi cung sau khi bo sung mapping vao workbook tong hop.
+```text
+.
+|-- config/
+|   `-- sources.json
+|-- data/
+|   |-- input/
+|   |   `-- raw/
+|   |       |-- ACCA.xlsx
+|   |       |-- CMA.xlsx
+|   |       `-- IT.xlsx
+|   `-- output/
+|       |-- staging/
+|       |   |-- normalized_output_*.xlsx
+|       |   `-- normalized_output_*.csv
+|       `-- final/
+|-- logs/
+|   `-- kpi_automation_*.log
+|-- automate_kpi.py
+|-- run_kpi_automation.ps1
+|-- setup_kpi_scheduled_task.ps1
+|-- cleanup_legacy_root.ps1
+|-- requirements.txt
+|-- USAGE.md
+|-- REQUIREMENTS_AUTOMATION.md
+`-- WORKFLOW_AUTOMATION.md
+```
 
-## 2. Input tu link duoc cung cap
+Files in `data/input/raw`, `data/output`, and `logs` are generated/local data and are ignored by git.
 
-Input duoc khai bao tai:
+## Input
 
-[config/sources.json](config/sources.json)
+Input is configured in:
 
-Vi du:
+```text
+config/sources.json
+```
+
+Each source has:
+
+- `url`: Google Sheet URL.
+- `file`: local exported file name under `data/input/raw`.
+- `department`: department label written to output.
+
+Example:
 
 ```json
 {
@@ -50,13 +72,13 @@ Vi du:
 }
 ```
 
-Khi chay voi `--download`, chuong trinh tu dong chuyen link tren thanh link export:
+When running with `--download`, the program converts each Google Sheet URL to:
 
 ```text
 https://docs.google.com/spreadsheets/d/<sheet_id>/export?format=xlsx
 ```
 
-Sau do file duoc tai ve:
+Then it saves raw input files here:
 
 ```text
 data/input/raw/ACCA.xlsx
@@ -64,41 +86,35 @@ data/input/raw/CMA.xlsx
 data/input/raw/IT.xlsx
 ```
 
-## 3. Xu ly du lieu
+## Processing logic
 
-### SX ACCA/CMA
+### ACCA/CMA
 
-Chuong trinh tu nhan dien 2 dang file:
+The script supports two formats:
 
-- `month_employee`: sheet theo thang, vi du `Apr 26`; nam/thang duoc suy ra tu ten sheet.
-- `employee_month`: sheet theo nhan vien; nam/thang lay truc tiep tu cot `Nam` va `Thang`.
+- `month_employee`: one sheet per month, many employees inside that sheet. Year/month are inferred from the sheet name, for example `Apr 26`.
+- `employee_month`: one sheet per employee, with explicit `Nam` and `Thang` columns.
 
-Header duoc tim bang cac cot nhu:
-
-- `Ten nhan vien`
-- `Ten san pham`
-- `So luong actual`
-- `KPI standard`
-- `Total KPI`
+The script finds the input table by detecting headers such as employee name, product name, actual quantity, KPI standard, and total KPI.
 
 ### IT
 
-File IT duoc xu ly theo dang ma tran:
+The IT source is treated as a matrix:
 
-- Dong 13: thong tin hang muc/du an/thang.
-- Dong 14: danh sach nhan vien theo cot ngang.
-- Moi o co gia tri khac 0 se duoc unpivot thanh mot dong output.
+- Row 13 contains project/category/system/month fields.
+- Row 14 contains employee names across columns.
+- Each non-zero employee cell is unpivoted into one normalized output row.
 
-## 4. Output la gi?
+## Output
 
-Output hien tai la bang staging da chuan hoa:
+Current output is staging data:
 
 ```text
 data/output/staging/normalized_output_YYYYMMDD_HHMMSS.xlsx
 data/output/staging/normalized_output_YYYYMMDD_HHMMSS.csv
 ```
 
-Bang staging gom cac cot:
+The staging table includes:
 
 - `source_file`
 - `source_sheet`
@@ -123,98 +139,84 @@ Bang staging gom cac cot:
 - `kpi_standard`
 - `total_kpi`
 
-Day la ket qua da duoc chuan hoa tu moi file nguon. File nay co the dung de:
+This staging output is the current final runnable result of the project. It is ready for review, Power Query import, or later mapping into the company workbook.
 
-- Review du lieu tong hop.
-- Import vao Power Query/Excel.
-- Mapping tiep vao workbook tong hop `Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx`.
+## Final workbook output
 
-## 5. Ket qua cuoi cung
-
-Ket qua cuoi cung du kien nam trong:
+The future final output should be stored under:
 
 ```text
 data/output/final/
 ```
 
-Hien tai project da automate den buoc staging. De ghi thang vao file tong hop cuoi cung, can dat file dich vao project va bo sung mapping sheet/cot:
+To generate the final workbook automatically, the target workbook must be available and its destination columns must be mapped:
 
 ```text
 Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx
 sheet: Data SX ACCA+CMA
 ```
 
-Ly do chua ghi thang vao file dich: file workbook dich chua co trong workspace luc build script, nen chua xac dinh duoc header/cot can ghi.
+This direct-write step is not implemented yet because the target workbook was not present when the automation was built.
 
-## 6. Cau truc thu muc
+## Run from scratch
 
-```text
-.
-├── config/
-│   └── sources.json
-├── data/
-│   ├── input/
-│   │   └── raw/
-│   │       ├── ACCA.xlsx
-│   │       ├── CMA.xlsx
-│   │       └── IT.xlsx
-│   └── output/
-│       ├── staging/
-│       │   ├── normalized_output_*.xlsx
-│       │   └── normalized_output_*.csv
-│       └── final/
-├── logs/
-│   └── kpi_automation_*.log
-├── automate_kpi.py
-├── run_kpi_automation.ps1
-├── setup_kpi_scheduled_task.ps1
-├── requirements.txt
-├── USAGE.md
-├── REQUIREMENTS_AUTOMATION.md
-└── WORKFLOW_AUTOMATION.md
-```
-
-File Excel nguon, output, va log khong duoc commit len GitHub.
-
-## 7. Cach chay
-
-Cai dependency:
+From PowerShell:
 
 ```powershell
+cd "C:\Users\admin\OneDrive\Documents\Excel"
 pip install -r requirements.txt
-```
-
-Chay workflow day du:
-
-```powershell
 powershell -ExecutionPolicy Bypass -File ".\run_kpi_automation.ps1"
 ```
 
-Chay Python truc tiep:
+After the run:
+
+- Raw Google Sheet exports are in `data/input/raw`.
+- Staging output is in `data/output/staging`.
+- Logs are in `logs`.
+
+## Run Python directly
+
+Download latest Google Sheets and build staging output:
 
 ```powershell
 python automate_kpi.py --download
 ```
 
-## 8. Chay tu dong
+Use existing raw files from `data/input/raw`:
 
-Tao scheduled task:
+```powershell
+python automate_kpi.py
+```
+
+## Schedule monthly run
+
+Create or update the Windows Scheduled Task:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ".\setup_kpi_scheduled_task.ps1"
 ```
 
-Mac dinh:
+Default schedule:
 
-- Chay ngay 3 hang thang.
-- Luc 09:00.
+- Day 3 of every month.
+- 09:00 local time.
 
-## 9. Bao mat du lieu
+## Clean generated files
 
-Repo public chi chua code/config/docs. Cac file sau bi ignore:
+Delete generated staging/final/log files manually, or remove old root-level generated files with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ".\cleanup_legacy_root.ps1"
+```
+
+## Data safety
+
+The public GitHub repo is intended to contain only code, config template, and docs. Generated Excel/CSV/log files are ignored by git:
 
 - `*.xlsx`
 - `*.csv`
 - `logs/`
-- file output sinh ra
+- `data/input/raw/*.xlsx`
+- `data/output/**/*.xlsx`
+- `data/output/**/*.csv`
 

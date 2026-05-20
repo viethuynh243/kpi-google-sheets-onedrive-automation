@@ -1,49 +1,68 @@
-# Requirement va thiet ke automation
+# Requirements and Automation Design
 
-## 1. Muc tieu
+## Objective
 
-Tu dong tong hop du lieu KPI/chi phi nhan su tu cac file Google Sheet phong ban vao mot bang chuan, sau do dua vao file tong hop tren OneDrive:
+Automatically consolidate KPI/personnel cost data from department Google Sheets into one normalized staging table.
 
-- Nguon SX ACCA/CMA: file co cau truc giong nhau nhung co 2 cach nhap khac nhau:
-  - Gop cong viec theo thang, trong sheet thang co nhieu nhan vien.
-  - Gop cong viec theo nhan vien, trong sheet nhan vien co cot nam va thang.
-- Nguon IT: file dang ma tran, dong la hang muc/du an/thang, cot ngang la nhan vien.
-- Dich: file `Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx`, sheet `Data SX ACCA+CMA` hoac sheet du lieu tong hop tuong ung.
+Current implemented output:
 
-## 2. Pham vi automate
+```text
+data/output/staging/normalized_output_*.xlsx
+data/output/staging/normalized_output_*.csv
+```
 
-Automation can thuc hien cac buoc:
+Future final output:
 
-1. Doc danh sach input tu `config/sources.json`.
-2. Tai ban moi nhat cua cac Google Sheet ve `data/input/raw` bang link export `.xlsx`.
-3. Doc tung file Excel nguon trong `data/input/raw`.
-4. Chuan hoa du lieu tu cac dang input khac nhau ve mot bang duy nhat.
-5. Ghi output staging ra `data/output/staging`.
-6. Khi co file dich that, ghi truc tiep vao sheet data cua file tong hop va luu trong `data/output/final`.
-7. OneDrive desktop app tu dong sync file sau khi script ghi xong.
+```text
+data/output/final/
+```
 
-## 3. Requirement moi truong
+## Scope
 
-- May Windows co cai OneDrive desktop app va da sync folder chua file tong hop.
-- Python 3.10 tro len.
-- Thu vien Python:
+The automation currently does:
+
+1. Read source definitions from `config/sources.json`.
+2. Download Google Sheets as `.xlsx` files into `data/input/raw`.
+3. Parse ACCA/CMA source files.
+4. Parse IT matrix source files.
+5. Normalize all rows into one staging table.
+6. Write `.xlsx` and `.csv` staging output into `data/output/staging`.
+7. Write run logs into `logs`.
+
+The automation does not yet write into the final company workbook because the target workbook and destination column mapping are not part of the project yet.
+
+## Environment requirements
+
+- Windows.
+- Python 3.10 or newer.
+- Python package:
   - `openpyxl`
-- Quyen truy cap Google Sheet:
-  - Link phai cho phep download/export.
-  - Neu file private, can dung file da download san hoac bo sung Google API credential.
-- File Excel dich khong duoc dang bi lock boi Excel khi script ghi du lieu.
+- OneDrive desktop app signed in if cloud sync is required.
+- Google Sheet links must allow export/download.
 
-## 4. File nguon
+Install dependency:
 
-| Phong ban | File local | Google Sheet ID |
+```powershell
+pip install -r requirements.txt
+```
+
+## Source files
+
+| Department | Raw local file | Google Sheet ID |
 | --- | --- | --- |
-| SX ACCA/CMA | `data/input/raw/CMA.xlsx` | `1jOaBolZ78dbelYkoFL5jSUE0-yJn5425` |
-| SX ACCA/CMA | `data/input/raw/ACCA.xlsx` | `16w4-UpSFnjVGpMJlfY9m8LIPTdMZy1dQ` |
+| SX ACCA+CMA | `data/input/raw/CMA.xlsx` | `1jOaBolZ78dbelYkoFL5jSUE0-yJn5425` |
+| SX ACCA+CMA | `data/input/raw/ACCA.xlsx` | `16w4-UpSFnjVGpMJlfY9m8LIPTdMZy1dQ` |
 | IT | `data/input/raw/IT.xlsx` | `1x9FBjRHISImjCII7GqOcTTn40_BmAnRN` |
 
-## 5. Bang output chuan
+Source URLs are configured in:
 
-Output hien tai gom cac cot:
+```text
+config/sources.json
+```
+
+## Normalized output schema
+
+The staging table has these columns:
 
 - `source_file`
 - `source_sheet`
@@ -68,73 +87,80 @@ Output hien tai gom cac cot:
 - `kpi_standard`
 - `total_kpi`
 
-Bang nay duoc dung lam lop staging. Khi co file tong hop that, mapping cot tu staging sang sheet dich se duoc cau hinh them theo header cua file dich.
+## ACCA/CMA parsing logic
 
-## 6. Logic xu ly
+The script:
 
-### SX ACCA/CMA
+1. Finds a header row containing employee/product fields.
+2. Detects whether the sheet is monthly or employee-month format.
+3. For monthly sheets, infers year/month from the sheet name, for example `Apr 26` means April 2026.
+4. For employee-month sheets, reads year/month from row values.
+5. Skips empty rows.
+6. Extracts product, link, subject, product feature, deliverable, component, actual quantity, KPI standard, and total KPI.
 
-- Tim dong header co `Tên nhân viên` va `Tên sản phẩm`.
-- Neu sheet co cot `Năm` va `Tháng`: lay truc tiep nam/thang tu dong du lieu.
-- Neu sheet khong co cot `Năm` va `Tháng`: suy ra nam/thang tu ten sheet, vi du `Apr 26` -> thang 4 nam 2026.
-- Bo qua dong rong.
-- Lay cac cot cong viec chinh: chuong trinh, vi tri, nhan vien, san pham, link, bo mon, dac tinh san pham, san pham ban giao, cau phan, do kho, so luong actual, KPI standard, total KPI.
+## IT parsing logic
 
-### IT
+The script:
 
-- Doc sheet theo nam, vi du `2026`.
-- Dong 13 la thong tin hang muc: `TT`, `Tên dự án`, `Phân loại`, `Hệ thống`, `Tháng`.
-- Dong 14 la danh sach nhan vien theo cot ngang.
-- Tu dong unpivot ma tran: moi o nhan vien co gia tri khac 0 se thanh mot dong output.
-- Lay vi tri tu suffix trong ten nhan vien neu co dang `Nhân viên demo 065 - BA`.
+1. Reads the year from the sheet name, for example `2026`.
+2. Uses row 13 for project/category/system/month fields.
+3. Uses row 14 for employee names across columns.
+4. Unpivots each non-zero employee cell into one output row.
+5. Extracts position from employee suffix when available, for example `Employee - BA`.
 
-## 7. Cach chay
+## Run commands
 
-Chay voi file nguon da co san trong thu muc:
+Full workflow:
 
 ```powershell
-python automate_kpi.py
+powershell -ExecutionPolicy Bypass -File ".\run_kpi_automation.ps1"
 ```
 
-Tai lai Google Sheet roi moi xu ly:
+Python with download:
 
 ```powershell
 python automate_kpi.py --download
 ```
 
-Chay voi thu muc khac:
+Python using existing raw files:
+
+```powershell
+python automate_kpi.py
+```
+
+Custom work directory:
 
 ```powershell
 python automate_kpi.py --work-dir "C:\Users\admin\OneDrive\Documents\Excel" --download
 ```
 
-Sau khi chay, chuong trinh tao trong `data/output/staging`:
+## Scheduled automation
 
-- `normalized_output_YYYYMMDD_HHMMSS.csv`
-- `normalized_output_YYYYMMDD_HHMMSS.xlsx`
-
-## 8. De xuat lich chay
-
-Nen dung Windows Task Scheduler:
-
-- Trigger: ngay 3 hang thang, sau deadline nhan su nhap KPI.
-- Action:
+Create/update scheduled task:
 
 ```powershell
-python "C:\Users\admin\OneDrive\Documents\Excel\automate_kpi.py" --work-dir "C:\Users\admin\OneDrive\Documents\Excel" --download
+powershell -ExecutionPolicy Bypass -File ".\setup_kpi_scheduled_task.ps1"
 ```
 
-## 9. Gioi han va rui ro
+Default schedule:
 
-- Power Automate cloud khong phai lua chon tot neu tai khoan OneDrive la personal/family/nhom, vi kha nang login/connector bi gioi han hon so voi tai khoan business.
-- Neu Google Sheet doi format header, script co the can update mapping.
-- Neu file dich dang mo trong Excel, thao tac ghi file co the fail.
-- Neu cong thuc trong Google Sheet khong duoc luu cached value vao file export, mot so cot cong thuc nhu `KPI standard`/`Total KPI` co the trong. Khi do nen tinh lai trong script hoac lay tu bang KPI standard.
+- Day 3 every month.
+- 09:00 local time.
 
-## 10. Viec can bo sung khi co file dich
+## Risks and limitations
 
-1. Doc sheet `Data SX ACCA+CMA` trong file `Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx`.
-2. Xac dinh header/cot can ghi.
-3. Them mapping tu bang staging sang sheet dich.
-4. Them che do append hoac replace du lieu theo ky thang.
-5. Them log bao cao so dong doc, so dong ghi, va cac dong loi mapping.
+- If Google Sheets change headers or layout, parser mapping may need updates.
+- If Google Sheet formulas do not export cached values, formula-derived columns may be blank.
+- Direct write to the final workbook is not implemented yet.
+- When final workbook writing is added, the destination file should be closed before the job runs.
+
+## Required work for final workbook output
+
+To complete the final workbook step:
+
+1. Add target workbook path config.
+2. Read the destination sheet `Data SX ACCA+CMA`.
+3. Map staging columns to target columns.
+4. Add replace-by-year-month logic to avoid duplicate rows.
+5. Save the resulting workbook under `data/output/final`.
+

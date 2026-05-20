@@ -1,20 +1,22 @@
-# Huong dan su dung
+# Usage Guide
 
-## 1. Input can chuan bi
+This guide explains how to run the automation from Google Sheet links to staging output.
 
-Nguoi dung chi can khai bao Google Sheet link trong:
+## 1. Check input config
+
+Open:
 
 ```text
 config/sources.json
 ```
 
-Moi source can co:
+Each input source must have:
 
-- `url`: link Google Sheet.
-- `file`: ten file raw se luu trong `data/input/raw`.
-- `department`: phong ban de gan vao output.
+- `url`: Google Sheet URL.
+- `file`: exported file name under `data/input/raw`.
+- `department`: department label in output.
 
-Vi du:
+Example:
 
 ```json
 {
@@ -26,15 +28,54 @@ Vi du:
 }
 ```
 
-## 2. Chay tu link Google Sheet ra raw input
+## 2. Install dependency
 
-Chay:
+Run once:
+
+```powershell
+cd "C:\Users\admin\OneDrive\Documents\Excel"
+pip install -r requirements.txt
+```
+
+## 3. Run full workflow
+
+Use this command for normal usage:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ".\run_kpi_automation.ps1"
+```
+
+What it does:
+
+1. Reads Google Sheet links from `config/sources.json`.
+2. Downloads raw Excel files into `data/input/raw`.
+3. Normalizes ACCA/CMA and IT data.
+4. Writes staging output into `data/output/staging`.
+5. Writes run log into `logs`.
+
+## 4. Run by Python
+
+Download latest Google Sheets and create output:
 
 ```powershell
 python automate_kpi.py --download
 ```
 
-Ket qua raw input:
+Use already downloaded files in `data/input/raw`:
+
+```powershell
+python automate_kpi.py
+```
+
+Run from another folder:
+
+```powershell
+python automate_kpi.py --work-dir "C:\Users\admin\OneDrive\Documents\Excel" --download
+```
+
+## 5. Locate files after running
+
+Raw input:
 
 ```text
 data/input/raw/CMA.xlsx
@@ -42,46 +83,34 @@ data/input/raw/ACCA.xlsx
 data/input/raw/IT.xlsx
 ```
 
-Neu file local dang bi lock, script se doc ban download tam thoi va tiep tuc chay.
-
-## 3. Chay tu raw input ra staging output
-
-Neu da co san file trong `data/input/raw`, co the chay:
-
-```powershell
-python automate_kpi.py
-```
-
-Ket qua staging output:
+Staging output:
 
 ```text
 data/output/staging/normalized_output_YYYYMMDD_HHMMSS.xlsx
 data/output/staging/normalized_output_YYYYMMDD_HHMMSS.csv
 ```
 
-## 4. Chay workflow day du bang PowerShell
+Run logs:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File ".\run_kpi_automation.ps1"
+```text
+logs/kpi_automation_YYYYMMDD_HHMMSS.log
 ```
 
-Workflow nay gom:
+Future final workbook output:
 
-1. Tai Google Sheet moi nhat.
-2. Luu raw input vao `data/input/raw`.
-3. Normalize du lieu.
-4. Luu staging output vao `data/output/staging`.
-5. Ghi log vao `logs`.
+```text
+data/output/final/
+```
 
-## 5. Kiem tra output
+## 6. Validate output
 
-Mo file moi nhat trong:
+Open the latest `.xlsx` file in:
 
 ```text
 data/output/staging/
 ```
 
-Kiem tra cac cot quan trong:
+Check these columns first:
 
 - `year`
 - `month`
@@ -91,50 +120,84 @@ Kiem tra cac cot quan trong:
 - `actual_quantity`
 - `total_kpi`
 
-## 6. Ket qua cuoi cung nam o dau?
+## 7. Schedule automatic run
 
-Thu muc ket qua cuoi cung:
-
-```text
-data/output/final/
-```
-
-Hien tai folder nay la noi de workbook tong hop sau khi bo sung buoc ghi vao file dich. Buoc nay can file:
-
-```text
-Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx
-```
-
-va can mapping sheet/cot cua file dich.
-
-## 7. Setup lich chay tu dong
+Create or update the scheduled task:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ".\setup_kpi_scheduled_task.ps1"
 ```
 
-Mac dinh task chay ngay 3 hang thang luc 09:00.
+Default task:
 
-## 8. Sua lich chay
+```text
+KPI GoogleSheet To OneDrive Automation
+```
 
-Mo file:
+Default schedule:
+
+- Day 3 every month.
+- 09:00 local time.
+
+## 8. Change schedule
+
+Open:
 
 ```text
 setup_kpi_scheduled_task.ps1
 ```
 
-Sua cac dong:
+Edit:
 
 ```powershell
 /D 3
 /ST 09:00
 ```
 
-Sau do chay lai script setup.
+Then run setup again:
 
-## 9. Thu muc khong duoc sua tay
+```powershell
+powershell -ExecutionPolicy Bypass -File ".\setup_kpi_scheduled_task.ps1"
+```
 
-- Khong can sua file trong `data/input/raw` neu chay bang `--download`, vi script se tu tai lai.
-- Khong nen sua file trong `data/output/staging`, vi day la output sinh ra.
-- Neu can chinh input, sua `config/sources.json`.
+## 9. Clean generated outputs
+
+To remove generated output and logs, delete files under:
+
+```text
+data/output/staging/
+data/output/final/
+logs/
+```
+
+Keep `.gitkeep` files if present.
+
+To move old generated files left in the project root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ".\cleanup_legacy_root.ps1"
+```
+
+If a file cannot be moved, close Excel or wait for OneDrive to release the file, then run the cleanup again.
+
+## 10. Troubleshooting
+
+If Google Sheet download fails:
+
+- Check that the URL in `config/sources.json` is correct.
+- Check that the sheet allows export/download.
+- Check internet connection.
+
+If a source file is locked:
+
+```text
+Warning: ACCA.xlsx is locked. Using downloaded temporary copy.
+```
+
+This is acceptable. The script will continue with the temporary downloaded file.
+
+If output is missing:
+
+- Check the latest file in `logs`.
+- Run the workflow again with `--download`.
 
