@@ -5,6 +5,7 @@
 *.csv
 *.download.xlsx
 logs/
+result/
 
 !data/
 !data/input/

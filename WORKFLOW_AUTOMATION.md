@@ -13,8 +13,9 @@ Automatically collect KPI/personnel cost data from department Google Sheets, nor
 4. Raw input is stored in data/input/raw
 5. Python normalizes ACCA/CMA and IT formats
 6. Staging output is stored in data/output/staging
-7. Logs are stored in logs
-8. OneDrive syncs local files to cloud
+7. IT template-compatible final output is stored in data/output/final
+8. Logs are stored in logs
+9. OneDrive syncs local files to cloud
 ```
 
 ## Source handling
@@ -58,10 +59,12 @@ This is the current runnable output and the main deliverable of the automation.
 ### Final output
 
 ```text
-data/output/final/
+data/output/final/IT_template_output_*.xlsx
 ```
 
-Reserved for the future workbook-writing step once the target workbook and destination mapping are available.
+For the IT template sample, this output preserves the same matrix structure as the source template.
+
+The separate company workbook output is still future work because the target workbook and destination mapping are not available yet.
 
 ## Manual run
 
@@ -103,4 +106,3 @@ To write directly into `Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx`, a
 2. Mapping from staging columns to `Data SX ACCA+CMA`.
 3. Replace-by-period logic to avoid duplicates.
 4. Validation report for written rows and rejected rows.
-

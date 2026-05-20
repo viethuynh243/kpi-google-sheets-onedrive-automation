@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import re
+import shutil
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime
@@ -364,6 +365,17 @@ def write_xlsx(rows: list[dict[str, Any]], path: Path) -> None:
     wb.save(path)
 
 
+def write_it_template_outputs(sources: Iterable[Source], final_dir: Path, timestamp: str) -> list[Path]:
+    outputs: list[Path] = []
+    for source in sources:
+        if source.key != "IT":
+            continue
+        output_path = final_dir / f"IT_template_output_{timestamp}.xlsx"
+        shutil.copy2(source.path, output_path)
+        outputs.append(output_path)
+    return outputs
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Normalize KPI Google Sheets into one table.")
     parser.add_argument("--work-dir", default=".", help="Folder containing source/output files.")
@@ -383,9 +395,12 @@ def main() -> None:
     xlsx_path = dirs["staging_output"] / f"normalized_output_{timestamp}.xlsx"
     write_csv(rows, csv_path)
     write_xlsx(rows, xlsx_path)
+    final_paths = write_it_template_outputs(sources, dirs["final_output"], timestamp)
     print(f"Done: {len(rows)} rows")
     print(f"CSV : {csv_path}")
     print(f"XLSX: {xlsx_path}")
+    for final_path in final_paths:
+        print(f"FINAL IT TEMPLATE: {final_path}")
 
 
 if __name__ == "__main__":

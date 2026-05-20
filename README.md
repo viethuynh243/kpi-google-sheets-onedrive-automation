@@ -12,7 +12,7 @@ config/sources.json
   -> automate_kpi.py
   -> data/output/staging/normalized_output_*.xlsx
   -> data/output/staging/normalized_output_*.csv
-  -> data/output/final/  (future final workbook output)
+  -> data/output/final/IT_template_output_*.xlsx
 ```
 
 ## Folder structure
@@ -32,6 +32,7 @@ config/sources.json
 |       |   |-- normalized_output_*.xlsx
 |       |   `-- normalized_output_*.csv
 |       `-- final/
+|           `-- IT_template_output_*.xlsx
 |-- logs/
 |   `-- kpi_automation_*.log
 |-- automate_kpi.py
@@ -105,9 +106,9 @@ The IT source is treated as a matrix:
 - Row 14 contains employee names across columns.
 - Each non-zero employee cell is unpivoted into one normalized output row.
 
-## Output
+## Output levels
 
-Current output is staging data:
+### 1. Staging output
 
 ```text
 data/output/staging/normalized_output_YYYYMMDD_HHMMSS.xlsx
@@ -139,17 +140,26 @@ The staging table includes:
 - `kpi_standard`
 - `total_kpi`
 
-This staging output is the current final runnable result of the project. It is ready for review, Power Query import, or later mapping into the company workbook.
+This staging output is the normalized long-table output. It is useful for review, Power Query import, and later mapping into another workbook.
 
-## Final workbook output
+### 2. Final template output
 
-The future final output should be stored under:
+For the IT template sample, the final output is template-compatible and is stored under:
 
 ```text
-data/output/final/
+data/output/final/IT_template_output_YYYYMMDD_HHMMSS.xlsx
 ```
 
-To generate the final workbook automatically, the target workbook must be available and its destination columns must be mapped:
+This file keeps the same shape as the sample Google Sheet:
+
+- Sheets by year, for example `2026`, `2025`.
+- Columns A:E for project/month information.
+- Employee names across columns from F onward.
+- Allocation values in the employee-month matrix.
+
+### 3. Future company workbook output
+
+To generate the company workbook automatically, the target workbook must be available and its destination columns must be mapped:
 
 ```text
 Von_hoa_chi_phi_nhan_su_2026_ANON_Huong_dan (1).xlsx
@@ -171,7 +181,8 @@ powershell -ExecutionPolicy Bypass -File ".\run_kpi_automation.ps1"
 After the run:
 
 - Raw Google Sheet exports are in `data/input/raw`.
-- Staging output is in `data/output/staging`.
+- Normalized staging output is in `data/output/staging`.
+- IT template-compatible final output is in `data/output/final`.
 - Logs are in `logs`.
 
 ## Run Python directly
@@ -219,4 +230,3 @@ The public GitHub repo is intended to contain only code, config template, and do
 - `data/input/raw/*.xlsx`
 - `data/output/**/*.xlsx`
 - `data/output/**/*.csv`
-

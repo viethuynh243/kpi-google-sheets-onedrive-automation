@@ -51,7 +51,8 @@ What it does:
 2. Downloads raw Excel files into `data/input/raw`.
 3. Normalizes ACCA/CMA and IT data.
 4. Writes staging output into `data/output/staging`.
-5. Writes run log into `logs`.
+5. Writes IT template-compatible final output into `data/output/final`.
+6. Writes run log into `logs`.
 
 ## 4. Run by Python
 
@@ -96,15 +97,15 @@ Run logs:
 logs/kpi_automation_YYYYMMDD_HHMMSS.log
 ```
 
-Future final workbook output:
+IT template-compatible final output:
 
 ```text
-data/output/final/
+data/output/final/IT_template_output_YYYYMMDD_HHMMSS.xlsx
 ```
 
 ## 6. Validate output
 
-Open the latest `.xlsx` file in:
+For normalized review, open the latest `.xlsx` file in:
 
 ```text
 data/output/staging/
@@ -119,6 +120,14 @@ Check these columns first:
 - `product_or_project`
 - `actual_quantity`
 - `total_kpi`
+
+For IT template review, open the latest file in:
+
+```text
+data/output/final/
+```
+
+It should have the same layout as the IT sample template: year sheets, project rows, employee columns, and allocation values as a matrix.
 
 ## 7. Schedule automatic run
 
@@ -200,4 +209,3 @@ If output is missing:
 
 - Check the latest file in `logs`.
 - Run the workflow again with `--download`.
-
